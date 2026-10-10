@@ -1,0 +1,80 @@
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: 500ms
+      timeout: 1s
+  cloud:
+    gateway:
+      server:
+        webflux:
+          default-filters:
+            - name: Retry
+              args:
+                retries: 1
+                statuses: SERVICE_UNAVAILABLE
+                # Only idempotent reads are retried. POST retries can duplicate bookings.
+                methods: GET
+          routes:
+            - id: vets-service
+              uri: lb://vets-service
+              predicates:
+                - Path=/api/vet/**
+              filters:
+                - StripPrefix=2
+                - CircuitBreaker=name=defaultCircuitBreaker,fallbackUri=/fallback
+            - id: visits-service
+              uri: lb://visits-service
+              predicates:
+                - Path=/api/visit/**
+              filters:
+                - StripPrefix=2
+                - CircuitBreaker=name=defaultCircuitBreaker,fallbackUri=/fallback
+            - id: customers-service
+              uri: lb://customers-service
+              predicates:
+                - Path=/api/customer/**
+              filters:
+                - StripPrefix=2
+                - CircuitBreaker=name=defaultCircuitBreaker,fallbackUri=/fallback
+            - id: genai-service
+              uri: lb://genai-service
+              predicates:
+                - Path=/api/genai/**
+              filters:
+                - StripPrefix=2
+                - CircuitBreaker=name=genaiCircuitBreaker,fallbackUri=/fallback
+  reactor:
+    context-propagation: auto
+
+housekeeping:
+  security:
+    enabled: true
+    issuer: housekeeping-platform
+    secret: ${HOUSEKEEPING_JWT_SECRET}
+  rate-limit:
+    ai-per-minute: ${AI_RATE_LIMIT_PER_MINUTE:20}
+    auth-per-minute: ${AUTH_RATE_LIMIT_PER_MINUTE:10}
+
+management:
+  tracing:
+    enabled: ${TRACING_ENABLED:false}
+  health:
+    redis:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,gateway
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+    import: configserver:http://config-server:8888

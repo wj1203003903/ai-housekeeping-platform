@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: ${VISITS_DATABASE_URL:jdbc:postgresql://localhost:5433/housekeeping?currentSchema=visits}
+    username: ${BUSINESS_DATABASE_USERNAME:housekeeping}
+    password: ${BUSINESS_DATABASE_PASSWORD}
+  sql:
+    init:
+      mode: never
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    create-schemas: true
+    schemas: visits
+    locations: classpath:db/migration/postgresql

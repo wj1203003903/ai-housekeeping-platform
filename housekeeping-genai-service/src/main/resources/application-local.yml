@@ -1,0 +1,16 @@
+housekeeping:
+  security:
+    secure-cookies: false
+    users:
+      customer:
+        password: "{noop}customer123"
+        user-id: "1"
+        role: CUSTOMER
+      worker:
+        password: "{noop}worker123"
+        user-id: "1"
+        role: WORKER
+      admin:
+        password: "{noop}admin123"
+        user-id: "admin"
+        role: ADMIN

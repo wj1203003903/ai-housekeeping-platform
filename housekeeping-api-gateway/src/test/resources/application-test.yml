@@ -1,0 +1,3 @@
+spring.cloud.config.enabled: false
+eureka.client.enabled: false
+housekeeping.security.secret: test-user-secret-0123456789-0123456789

@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: visits-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/}
+  sql:
+    init:
+      schema-locations: classpath*:db/hsqldb/schema.sql
+      data-locations: classpath*:db/hsqldb/data.sql
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: false
+
+housekeeping:
+  security:
+    secret: ${HOUSEKEEPING_JWT_SECRET}
+    internal-secret: ${HOUSEKEEPING_INTERNAL_JWT_SECRET}
+
+management:
+  tracing:
+    enabled: ${TRACING_ENABLED:false}
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+    import: configserver:http://config-server:8888

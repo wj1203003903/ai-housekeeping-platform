@@ -1,0 +1,8 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+housekeeping:
+  security:
+    secret: test-user-secret-0123456789-0123456789
+    internal-secret: test-internal-secret-0123456789-012345

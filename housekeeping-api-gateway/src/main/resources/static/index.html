@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>安心到家｜专业家政服务管理</title>
+    <link rel="stylesheet" href="/webjars/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/webjars/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/css/housekeeping.css">
+</head>
+<body>
+<section id="loginScreen" class="login-screen" aria-labelledby="loginTitle">
+    <div class="login-brand">
+        <span class="login-brand-mark">安</span>
+        <span><b>安心到家</b><small>ANXIN HOME SERVICE</small></span>
+    </div>
+    <div class="login-panel">
+        <span class="eyebrow">SECURE SERVICE CONSOLE</span>
+        <h1 id="loginTitle">欢迎回来</h1>
+        <p>登录后进入与你身份匹配的家政服务工作台。</p>
+        <form id="loginForm" class="login-form">
+            <label>账号<input id="loginUsername" autocomplete="username" required placeholder="请输入账号"></label>
+            <label>密码<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="请输入密码"></label>
+            <p id="loginError" class="login-error" role="alert"></p>
+            <button id="loginSubmit" class="primary" type="submit">登录</button>
+        </form>
+        <div class="registration-entry">
+            <span>首次使用？</span>
+            <button id="openCustomerRegister" type="button">注册客户账号</button>
+            <button id="openWorkerRegister" type="button">注册服务人员</button>
+        </div>
+    </div>
+</section>
+
+<dialog id="registrationDialog" class="registration-dialog">
+    <form id="registrationForm">
+        <input id="registrationRole" type="hidden">
+        <div class="dialog-head">
+            <div><span id="registrationEyebrow">CREATE ACCOUNT</span><h2 id="registrationTitle">注册客户账号</h2></div>
+            <button id="closeRegistration" type="button" aria-label="关闭">×</button>
+        </div>
+        <p id="registrationLead" class="registration-lead">填写账号、联系方式和默认服务地址，注册后可直接预约。</p>
+        <div class="form-grid">
+            <label>登录账号<input id="registrationUsername" autocomplete="username" pattern="[A-Za-z0-9_]{4,30}" required placeholder="4–30 位字母、数字或下划线"></label>
+            <label>登录密码<input id="registrationPassword" type="password" autocomplete="new-password" minlength="10" maxlength="72" pattern="(?=.*[A-Za-z])(?=.*\d).{10,72}" required placeholder="至少 10 位，包含字母和数字"></label>
+            <label>姓名<input id="registrationName" maxlength="50" required></label>
+            <label>联系电话<input id="registrationTelephone" maxlength="30" required></label>
+
+            <div id="customerRegistrationFields" class="registration-fields wide">
+                <label>电子邮箱<input id="registrationEmail" type="email" maxlength="100"></label>
+                <label>城市<input id="registrationCity" value="上海市" maxlength="50"></label>
+                <label>行政区<input id="registrationDistrict" maxlength="50" placeholder="如：浦东新区"></label>
+                <label>详细地址<input id="registrationAddress" maxlength="200"></label>
+                <label class="wide">上门说明<textarea id="registrationAccess" rows="2" maxlength="500" placeholder="门禁、楼层或其他注意事项"></textarea></label>
+            </div>
+
+            <div id="workerRegistrationFields" class="registration-fields wide" hidden>
+                <label>工作年限<input id="registrationExperience" type="number" min="0" max="60" value="1"></label>
+                <label>服务区域<input id="registrationServiceDistrict" maxlength="100" placeholder="全市，或浦东新区、徐汇区"></label>
+                <label class="wide">个人介绍<textarea id="registrationIntroduction" rows="2" maxlength="500"></textarea></label>
+                <label class="wide">服务技能<select id="registrationSkills" multiple size="4"></select><small>可按住 Ctrl / Command 选择多项</small></label>
+            </div>
+        </div>
+        <p id="registrationError" class="login-error" role="alert"></p>
+        <div class="dialog-actions">
+            <button id="cancelRegistration" type="button" class="secondary">返回登录</button>
+            <button id="registrationSubmit" class="primary" type="submit">注册并进入系统</button>
+        </div>
+    </form>
+</dialog>
+
+<div id="applicationShell" class="application-shell auth-pending">
+<nav class="app-nav">
+    <a class="brand" href="#dashboard" data-view-target="dashboard">
+        <span class="brand-mark">安</span>
+        <span class="brand-copy"><b>安心到家</b><small>ANXIN HOME SERVICE</small></span>
+    </a>
+    <div class="nav-links">
+        <button data-view="dashboard" class="active">概览</button>
+        <button data-view="services">服务项目</button>
+        <button data-view="workers">服务团队</button>
+        <button data-view="customers">客户档案</button>
+        <button data-view="bookings">预约订单</button>
+    </div>
+    <button class="primary small" data-open-booking>新建预约</button>
+    <div class="nav-account">
+        <button id="accountButton" class="account-button" type="button">
+            <span id="accountAvatar">用</span><span><b id="accountName">用户</b><small id="accountRole">客户</small></span>
+        </button>
+        <button id="logoutButton" class="logout-button" type="button">退出</button>
+    </div>
+</nav>
+
+<main>
+    <section id="dashboard" class="view active">
+        <div class="hero">
+            <div class="hero-copy">
+                <span class="eyebrow">PROFESSIONAL HOME SERVICE</span>
+                <h1>让专业服务，<br>从容抵达每一个家。</h1>
+                <p>从客户档案、服务标准到人员调度与订单履约，建立清晰、可信赖的家政服务流程。</p>
+                <div class="hero-actions">
+                    <button class="primary" data-open-booking>创建服务预约</button>
+                    <button class="text-button" data-view-target="services">浏览服务目录 <span>→</span></button>
+                </div>
+            </div>
+            <aside class="hero-panel">
+                <div class="panel-top">
+                    <span>今日安排</span>
+                    <small id="currentDate"></small>
+                </div>
+                <div class="today-number"><strong id="todayCount">0</strong><span>项服务</span></div>
+                <div class="panel-rule"></div>
+                <div class="hero-meta">
+                    <div><b id="workerCount">0</b><span>可服务人员</span></div>
+                    <div><b id="serviceCount">0</b><span>标准服务项目</span></div>
+                </div>
+                <p class="panel-note">所有服务记录均通过统一流程进行管理。</p>
+            </aside>
+        </div>
+
+        <div class="stats">
+            <article><span>客户档案</span><strong id="customerCount">0</strong><small>已建立联系与地址信息</small></article>
+            <article><span>累计订单</span><strong id="bookingCount">0</strong><small>平台全部预约记录</small></article>
+            <article><span>待履约</span><strong id="pendingCount">0</strong><small>等待接单或服务中</small></article>
+            <article><span>已完成</span><strong id="completedCount">0</strong><small>已完成的服务订单</small></article>
+        </div>
+
+        <div class="section-heading">
+            <div><span>SELECTED SERVICES</span><h2>常用服务</h2></div>
+            <button class="text-button" data-view-target="services">查看全部 <span>→</span></button>
+        </div>
+        <div id="featuredServices" class="card-grid"></div>
+    </section>
+
+    <section id="services" class="view">
+        <div class="page-heading">
+            <div><span>SERVICE CATALOGUE</span><h1>服务项目</h1><p>明确的服务内容、时间标准与计价方式。</p></div>
+        </div>
+        <div id="serviceGrid" class="card-grid"></div>
+    </section>
+
+    <section id="workers" class="view">
+        <div class="page-heading">
+            <div><span>OUR PROFESSIONALS</span><h1>服务团队</h1><p>查看服务人员的技能、经验、评分与服务区域。</p></div>
+            <button class="primary" data-dialog-open="workerDialog">新增人员</button>
+        </div>
+        <div id="workerGrid" class="worker-grid"></div>
+    </section>
+
+    <section id="customers" class="view">
+        <div class="page-heading">
+            <div><span>CLIENT RECORDS</span><h1>客户档案</h1><p>集中维护联系方式、服务地址与上门说明。</p></div>
+            <button class="primary" data-dialog-open="customerDialog">新增客户</button>
+        </div>
+        <div class="table-shell">
+            <table>
+                <thead><tr><th>客户</th><th>联系电话</th><th>电子邮箱</th><th>服务地址</th></tr></thead>
+                <tbody id="customerRows"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="bookings" class="view">
+        <div class="page-heading">
+            <div><span>SERVICE ORDERS</span><h1>预约订单</h1><p>跟进分配、接单、服务与完成状态。</p></div>
+            <button class="primary" data-open-booking>新建预约</button>
+        </div>
+        <div class="filters">
+            <button class="active" data-status="">全部</button>
+            <button data-status="ASSIGNED">已分配</button>
+            <button data-status="ACCEPTED">已接单</button>
+            <button data-status="IN_SERVICE">服务中</button>
+            <button data-status="COMPLETED">已完成</button>
+            <button data-status="CANCELLED">已取消</button>
+        </div>
+        <div class="table-shell">
+            <table>
+                <thead><tr><th>订单编号</th><th>客户与服务</th><th>服务时间</th><th>服务人员</th><th>金额</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody id="bookingRows"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<dialog id="bookingDialog">
+    <form id="bookingForm">
+        <div class="dialog-head">
+            <div><span>NEW APPOINTMENT</span><h2>创建服务预约</h2></div>
+            <button type="button" data-dialog-close="bookingDialog" aria-label="关闭">×</button>
+        </div>
+        <div class="form-grid">
+            <label>客户<select id="bookingCustomer" required></select></label>
+            <label>服务地址<select id="bookingAddress" required></select></label>
+            <label>服务项目<select id="bookingService" required></select></label>
+            <label>服务数量<input id="bookingQuantity" type="number" min="1" step="0.5" value="2" required></label>
+            <label>服务日期<input id="bookingDate" type="date" required></label>
+            <label>开始时间<input id="bookingStart" type="time" value="09:00" required></label>
+            <label>结束时间<input id="bookingEnd" type="time" value="11:00" required></label>
+            <label>服务人员<select id="bookingWorker" required><option value="">请选择服务人员</option></select></label>
+            <label class="wide">上门备注<textarea id="bookingRemark" rows="3" placeholder="门禁、宠物或其他上门注意事项"></textarea></label>
+        </div>
+        <div class="quote"><span>预计费用</span><strong id="bookingPrice">¥0.00</strong><small id="pricingHint">请选择服务项目</small></div>
+        <div class="dialog-actions">
+            <button type="button" class="secondary" id="refreshWorkers">刷新可用人员</button>
+            <button class="primary">确认创建</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="customerDialog">
+    <form id="customerForm">
+        <div class="dialog-head">
+            <div><span>NEW CLIENT</span><h2>新增客户</h2></div>
+            <button type="button" data-dialog-close="customerDialog" aria-label="关闭">×</button>
+        </div>
+        <div class="form-grid">
+            <label>客户姓名<input id="customerName" required></label>
+            <label>联系电话<input id="customerTelephone" required></label>
+            <label class="wide">电子邮箱<input id="customerEmail" type="email"></label>
+            <div class="form-divider wide">默认服务地址</div>
+            <label>城市<input id="addressCity" value="上海市" required></label>
+            <label>行政区<input id="addressDistrict" required></label>
+            <label class="wide">详细地址<input id="addressDetail" required></label>
+            <label class="wide">上门说明<textarea id="addressInstruction" rows="2"></textarea></label>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="secondary" data-dialog-close="customerDialog">取消</button>
+            <button class="primary">保存客户</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="workerDialog">
+    <form id="workerForm">
+        <div class="dialog-head">
+            <div><span>NEW PROFESSIONAL</span><h2>新增服务人员</h2></div>
+            <button type="button" data-dialog-close="workerDialog" aria-label="关闭">×</button>
+        </div>
+        <div class="form-grid">
+            <label>姓名<input id="workerName" required></label>
+            <label>联系电话<input id="workerTelephone" required></label>
+            <label>工作年限<input id="workerExperience" type="number" min="0" value="1" required></label>
+            <label>服务区域<input id="workerDistrict" placeholder="全市，或浦东新区、徐汇区" required></label>
+            <label class="wide">个人介绍<textarea id="workerIntroduction" rows="2"></textarea></label>
+            <label class="wide">服务技能<select id="workerSkills" multiple size="4"></select></label>
+        </div>
+        <div class="dialog-actions">
+            <button type="button" class="secondary" data-dialog-close="workerDialog">取消</button>
+            <button class="primary">保存人员</button>
+        </div>
+    </form>
+</dialog>
+
+<div id="toast"></div>
+
+<div class="chatbox minimized" id="chatbox">
+    <button class="chatbox-header" id="toggleChatbox">
+        <span class="service-dot"></span>
+        <span><b>在线服务助理</b><small>查询服务与预约</small></span>
+        <i>＋</i>
+    </button>
+    <div class="chatbox-content" id="chatbox-content">
+        <div class="chatbox-messages" id="chatbox-messages">
+            <div class="chat-bubble bot">您好，我可以协助查询服务项目、可用人员和预约记录。</div>
+        </div>
+        <div class="chatbox-footer">
+            <input id="chatbox-input" placeholder="请输入您的问题">
+            <button id="sendChatMessage">发送</button>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script src="/scripts/auth.js"></script>
+<script src="/scripts/genai/chat.js"></script>
+<script src="/scripts/housekeeping.js"></script>
+</body>
+</html>

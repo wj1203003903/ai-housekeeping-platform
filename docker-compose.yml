@@ -1,0 +1,254 @@
+services:
+  redis:
+    image: redis:7.4-alpine
+    container_name: housekeeping-redis
+    command: ["sh", "-c", "exec redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\""]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - housekeeping-redis-data:/data
+
+  ai-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: housekeeping-ai-postgres
+    environment:
+      POSTGRES_DB: housekeeping_ai
+      POSTGRES_USER: housekeeping
+      POSTGRES_PASSWORD: ${GENAI_DATABASE_ADMIN_PASSWORD:?GENAI_DATABASE_ADMIN_PASSWORD must be set}
+      GENAI_DATABASE_PASSWORD: ${GENAI_DATABASE_PASSWORD:?GENAI_DATABASE_PASSWORD must be set}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U housekeeping -d housekeeping_ai"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    volumes:
+      - housekeeping-ai-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-genai.sh:/docker-entrypoint-initdb.d/10-init-genai.sh:ro
+  business-postgres:
+    image: postgres:16-alpine
+    container_name: housekeeping-business-postgres
+    environment:
+      POSTGRES_DB: housekeeping
+      POSTGRES_USER: housekeeping
+      POSTGRES_PASSWORD: ${BUSINESS_DATABASE_ADMIN_PASSWORD:?BUSINESS_DATABASE_ADMIN_PASSWORD must be set}
+      CUSTOMERS_DATABASE_PASSWORD: ${CUSTOMERS_DATABASE_PASSWORD:?CUSTOMERS_DATABASE_PASSWORD must be set}
+      VETS_DATABASE_PASSWORD: ${VETS_DATABASE_PASSWORD:?VETS_DATABASE_PASSWORD must be set}
+      VISITS_DATABASE_PASSWORD: ${VISITS_DATABASE_PASSWORD:?VISITS_DATABASE_PASSWORD must be set}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U housekeeping -d housekeeping"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    volumes:
+      - housekeeping-business-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-business.sh:/docker-entrypoint-initdb.d/10-init-business.sh:ro
+  config-server:
+    image: anxinhome/housekeeping-config-server
+    container_name: config-server
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-I", "http://config-server:8888"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+     - 127.0.0.1:8888:8888
+
+  discovery-server:
+    image: anxinhome/housekeeping-discovery-server
+    container_name: discovery-server
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://discovery-server:8761"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      config-server:
+        condition: service_healthy
+    ports:
+     - 127.0.0.1:8761:8761
+
+  customers-service:
+    image: anxinhome/housekeeping-customers-service
+    container_name: customers-service
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      business-postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=postgresql
+      - CUSTOMERS_DATABASE_URL=jdbc:postgresql://business-postgres:5432/housekeeping?currentSchema=customers
+      - BUSINESS_DATABASE_USERNAME=customers_app
+      - BUSINESS_DATABASE_PASSWORD=${CUSTOMERS_DATABASE_PASSWORD:?CUSTOMERS_DATABASE_PASSWORD must be set}
+      - HOUSEKEEPING_JWT_SECRET=${HOUSEKEEPING_JWT_SECRET:?HOUSEKEEPING_JWT_SECRET must be set}
+      - HOUSEKEEPING_INTERNAL_JWT_SECRET=${HOUSEKEEPING_INTERNAL_JWT_SECRET:?HOUSEKEEPING_INTERNAL_JWT_SECRET must be set}
+
+  visits-service:
+    image: anxinhome/housekeeping-visits-service
+    container_name: visits-service
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      business-postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=postgresql
+      - VISITS_DATABASE_URL=jdbc:postgresql://business-postgres:5432/housekeeping?currentSchema=visits
+      - BUSINESS_DATABASE_USERNAME=visits_app
+      - BUSINESS_DATABASE_PASSWORD=${VISITS_DATABASE_PASSWORD:?VISITS_DATABASE_PASSWORD must be set}
+      - HOUSEKEEPING_JWT_SECRET=${HOUSEKEEPING_JWT_SECRET:?HOUSEKEEPING_JWT_SECRET must be set}
+      - HOUSEKEEPING_INTERNAL_JWT_SECRET=${HOUSEKEEPING_INTERNAL_JWT_SECRET:?HOUSEKEEPING_INTERNAL_JWT_SECRET must be set}
+
+  vets-service:
+    image: anxinhome/housekeeping-vets-service
+    container_name: vets-service
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      business-postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=postgresql
+      - VETS_DATABASE_URL=jdbc:postgresql://business-postgres:5432/housekeeping?currentSchema=vets
+      - BUSINESS_DATABASE_USERNAME=vets_app
+      - BUSINESS_DATABASE_PASSWORD=${VETS_DATABASE_PASSWORD:?VETS_DATABASE_PASSWORD must be set}
+      - HOUSEKEEPING_JWT_SECRET=${HOUSEKEEPING_JWT_SECRET:?HOUSEKEEPING_JWT_SECRET must be set}
+      - HOUSEKEEPING_INTERNAL_JWT_SECRET=${HOUSEKEEPING_INTERNAL_JWT_SECRET:?HOUSEKEEPING_INTERNAL_JWT_SECRET must be set}
+
+
+  genai-service:
+    image: anxinhome/housekeeping-genai-service
+    container_name: genai-service
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - DASHSCOPE_BASE_URL=${DASHSCOPE_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      - GENAI_DATABASE_URL=jdbc:postgresql://ai-postgres:5432/housekeeping_ai?currentSchema=genai
+      - GENAI_DATABASE_USERNAME=genai_app
+      - GENAI_DATABASE_PASSWORD=${GENAI_DATABASE_PASSWORD:?GENAI_DATABASE_PASSWORD must be set}
+      - SEMANTIC_MEMORY_ENABLED=true
+      - SPRING_PROFILES_ACTIVE=postgresql
+      - HOUSEKEEPING_JWT_SECRET=${HOUSEKEEPING_JWT_SECRET:?HOUSEKEEPING_JWT_SECRET must be set}
+      - HOUSEKEEPING_INTERNAL_JWT_SECRET=${HOUSEKEEPING_INTERNAL_JWT_SECRET:?HOUSEKEEPING_INTERNAL_JWT_SECRET must be set}
+      - HOUSEKEEPING_SECURE_COOKIES=true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-postgres:
+        condition: service_healthy
+
+
+  api-gateway:
+    image: anxinhome/housekeeping-api-gateway
+    container_name: api-gateway
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+      - HOUSEKEEPING_JWT_SECRET=${HOUSEKEEPING_JWT_SECRET:?HOUSEKEEPING_JWT_SECRET must be set}
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+     - 127.0.0.1:8080:8080
+
+  tracing-server:
+    image: openzipkin/zipkin
+    container_name: tracing-server
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    ports:
+     - 127.0.0.1:9411:9411
+
+  admin-server:
+    image: anxinhome/housekeeping-admin-server
+    container_name: admin-server
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    ports:
+     - 127.0.0.1:9090:9090
+
+  ## Grafana / Prometheus
+
+  grafana-server:
+    build: ./docker/grafana
+    container_name: grafana-server
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    ports:
+    - 127.0.0.1:3030:3000
+
+  prometheus-server:
+    build: ./docker/prometheus
+    container_name: prometheus-server
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    ports:
+    - 127.0.0.1:9091:9090
+
+volumes:
+  housekeeping-redis-data:
+  housekeeping-ai-postgres-data:
+  housekeeping-business-postgres-data:

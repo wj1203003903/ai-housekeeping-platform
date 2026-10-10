@@ -1,0 +1,86 @@
+spring:
+  main:
+    web-application-type: reactive
+  application:
+    name: genai-service
+  datasource:
+    url: ${GENAI_DATABASE_URL:jdbc:hsqldb:mem:genai}
+    username: ${GENAI_DATABASE_USERNAME:sa}
+    password: ${GENAI_DATABASE_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+  flyway:
+    enabled: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: 500ms
+      timeout: 1s
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888/},optional:classpath:/creds.yaml
+  ai:
+    model:
+      chat: deepseek
+      audio:
+        speech: none
+        transcription: none
+      image: none
+      moderation: none
+    chat:
+      client:
+        enabled: true
+    # DeepSeek supplies chat; Qwen embeddings use DashScope's OpenAI-compatible API.
+    deepseek:
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+      api-key: ${DEEPSEEK_API_KEY}
+      chat:
+        options:
+          temperature: 0.7
+          model: deepseek-v4-flash
+    openai:
+      embedding:
+        base-url: ${DASHSCOPE_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+        api-key: ${DASHSCOPE_API_KEY}
+        options:
+          model: text-embedding-v4
+
+housekeeping:
+  security:
+    enabled: true
+    issuer: housekeeping-platform
+    secret: ${HOUSEKEEPING_JWT_SECRET}
+    internal-secret: ${HOUSEKEEPING_INTERNAL_JWT_SECRET}
+    secure-cookies: ${HOUSEKEEPING_SECURE_COOKIES:true}
+    token-ttl: 15m
+  memory:
+    max-messages: 20
+    redis-ttl: 24h
+    semantic-enabled: ${SEMANTIC_MEMORY_ENABLED:false}
+    semantic-top-k: 5
+
+management:
+  tracing:
+    enabled: ${TRACING_ENABLED:false}
+  health:
+    redis:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+    import: configserver:http://config-server:8888
